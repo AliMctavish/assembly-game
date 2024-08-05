@@ -1,5 +1,6 @@
 				processor 6502		
 				include	 "vcs.h"		
+				include "macro.h"
 										
 BORDERCOLOR		equ 	#$3f
 TESTBORDERCOLOR	equ 	#$1a
@@ -61,18 +62,46 @@ drawfield:		cpx		#BORDERHEIGHT-1	; Borderheight-1 will be interpreted by the ass
 				beq    changecolor
 				cpx    #191
 				beq    changetoanothercolor
+				
+				jmp    DrawPlayer
+				
 							
 				jmp 	borderdone
+				
+				
+DrawPlayer:
+			lda #%1111111
+			sta GRP0
+			lda #$0E
+			sta COLUP0
+			ldx #10
+			
+
+
+			jmp borderdone
+			
+			
+MovePlayer: ;building the player movement for the game
+			inx
+			cpx #100
+			beq borderdone
+			
+			sta WSYNC
+			Sleep #10
+			sta RESP0
+			jmp MovePlayer
+
+
 
 borderbottom:  	lda		#%11111111		; Solid row of pixels for all PF# registers
 				 sta     PF0
-				;sta		PF1
-				;sta		PF2				
+				sta		PF1
+				sta		PF2				
 
 				jmp 	borderdone
 
-borderwalls:	;lda     #%11111111		; Set the first pixel of PF0. Uses the 4 hight bits and rendered in reverse.
-				;sta     PF0				; Set PF0 register
+borderwalls:	lda     #%11111111		; Set the first pixel of PF0. Uses the 4 hight bits and rendered in reverse.
+				sta     PF0				; Set PF0 register
 				lda		#%0000000		; Clear the PF1-2 registers to have an empty middle
 				sta 	PF1
 				sta     PF2
