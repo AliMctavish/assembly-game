@@ -1,75 +1,90 @@
-	processor 6502
-	include "vcs.h"
+; s01e03 Changing the background color
+; This example uses the TIA PF0, PF1, PF2, and CTLRPF 
+; Registers to draw playfield graphics using one register at a time
+; first in normal mode, and then in mirrored
 
-BLUE           = $9a         ;              define symbol for TIA color (NTSC)
+; This Episode on Youtube - https://youtu.be/nKhgqCp8wNk
+
+; Become a Patron - https://patreon.com/8blit
+; 8blit Merch - https://8blit.myspreadshop.com/
+; Subscribe to 8Blit - https://www.youtube.com/8blit?sub_confirmation=1
+; Follow on Facebook - https://www.facebook.com/8Blit
+; Follow on Instagram - https://www.instagram.com/8blit
+; Visit the Website - https://www.8blit.com 
+
+; Email - 8blit0@gmail.com
+
+	processor 6502
+	include	 "vcs.h"
 
 	seg
 	org $f000
 
 reset:
-	; clear RAM and all TIA registers
-	ldx #0                   ;              load the value 0 into (x)
-	lda #0                   ;              load the value 0 into (a)
-clear:                       ;              define a label 
-	sta 0,x                  ;              store value in (a) at address of 0 with offset (x)
-	inx                      ;              inc (x) by 1. it will count to 255 then rollover to 0
-	bne clear                ;              branch up to the 'clear' label if (x) != 0
-
-	lda #BLUE                ;              load the value from the symbol 'blue' into (a)
-	sta COLUBK               ;              store (a) into the TIA background color register
-
-startFrame:
-	; start of new frame
-	; start of vertical blank processing
-	lda #0                   ;              load the value 0 into (a)
-	sta VBLANK               ;              store (a) into the TIA VBLANK register
-	lda #2                   ;              load the value 2 into (a). 
-	sta VSYNC                ;              store (a) into TIA VSYNC register to turn on vsync
-	sta WSYNC                ;              write any value to TIA WSYNC register to wait for hsync
-;---------------------------------------
-	sta WSYNC
-;---------------------------------------
-	sta WSYNC                ;              we need 3 scanlines of VSYNC for a stable frame
-;---------------------------------------
+	; Clear RAM and all TIA registers
+	ldx #0
 	lda #0
-	sta VSYNC                ;              store 0 into TIA VSYNC register to turn off vsync
+clear:
+	sta 0,x
+	inx                      ;              increase the value in (x)
+	bne clear                ;              branch to clear if result not zero
 
-	; generate 37 scanlines of vertical blank
-	ldx #0
-verticalBlank:   
-	sta WSYNC                ;              write any value to TIA WSYNC register to wait for hsync
-;---------------------------------------
-	inx
-	cpx #37                  ;              compare the value in (x) to the immeadiate value of 37
-	bne verticalBlank        ;              branch to 'verticalBlank' label if compare not equal
-
-	; generate 192 lines of playfield
-	ldx #0
-playfield:
+startOfFrame
+; start of new frame
+; start of vertical blank processing
+	lda #0
+	sta VBLANK               ;              turn off vblank
+	lda #2                   ;              turn on vsync for three scanlines
+	sta VSYNC
 	sta WSYNC
-;--------------------------------------
-	inx
-	cpx #192                 ;              compare the value in (x) to the immeadiate value of 192
-	bne playfield            ;              branch to 'drawField' label if compare not equal
+;---------------------------------------	
+	sta WSYNC
+;---------------------------------------	
+	sta WSYNC
+;---------------------------------------	
+	lda #0
+	sta VSYNC                ;              turn off vsync
 
-	; end of playfield - turn on vertical blank
-    lda #%01000010
+	; 37 scanlines of vertical blank.
+	ldx #0
+verticalBlank
+	sta WSYNC
+;---------------------------------------
+	inx                      ;              increase the value in (x)
+	cpx #37                  ;              compare (x) to the immediate value 37
+	bne verticalBlank        ;              branch up to verticalBlank if result not zero
+
+	; here is our main kernel where we'll draw 192 scanlines
+	ldx #0
+drawField:
+
+	; This will draw the background using the value of the current scanline
+	stx COLUBK               ;              set the background color
+	sta WSYNC
+;---------------------------------------
+	inx                      ;              increase the value in (x)
+	cpx #192                 ;              compare (x) to the immediate value 192
+	inx
+	bne drawField            ;              branch up to drawField if result not zero
+
+	; end of screen - enter blanking
+    lda #%00000010           ;              turn on vblank with d2
     sta VBLANK
 
-	; generate 30 scanlines of overscan
+	; 30 scanlines of overscan
 	ldx #0
-overscan:        
+overscan        
 	sta WSYNC
-;---------------------------------------
-	inx
-	cpx #30                  ;              compare value in (x) to immeadiate value of 30
-	bne overscan             ;              branch up to 'overscan' label, compare if not equal
-	jmp startFrame           ;              frame completed, branch up to the 'startFrame' label
+;---------------------------------------	
+	inx                      ;              increase the value in (x)
+	cpx #30               ;              compare (x) to the immediate value 30
+	bne overscan             ;              branch up to overscan if result not zero
+	jmp startOfFrame         ;              branch up to startOfFrame
 ;------------------------------------------------
 
-	org $fffa                ;              set origin to last 6 bytes of 4k rom
+	ORG $FFFA
 	
-interruptVectors:
+interruptVectors
 	.word reset              ;              nmi
 	.word reset              ;              reset
 	.word reset              ;              irq
