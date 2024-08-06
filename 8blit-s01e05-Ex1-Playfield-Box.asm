@@ -75,22 +75,14 @@ DrawPlayer:
 			lda #$0E
 			sta COLUP0
 			ldx #10
-			
-
+			sta WSYNC
+looping:	dex
+			Sleep #$4a
+			sta RESP0
+			cpx #0
+			bne looping
 
 			jmp borderdone
-			
-			
-MovePlayer: ;building the player movement for the game
-			inx
-			cpx #100
-			beq borderdone
-			
-			sta WSYNC
-			Sleep #10
-			sta RESP0
-			jmp MovePlayer
-
 
 
 borderbottom:  	lda		#%11111111		; Solid row of pixels for all PF# registers
