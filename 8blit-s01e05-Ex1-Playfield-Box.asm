@@ -5,6 +5,12 @@
 BORDERCOLOR		equ 	#$3f
 TESTBORDERCOLOR	equ 	#$1a
 BORDERHEIGHT	equ		#8				; How many scan lines are our top and bottom borders
+				seg.u	vars				; uninitialized segment 
+				org		$80
+
+X_POS		equ		#33  ; we should make the line move :D 
+
+player0_x 	ds 		#X_POS
 
 				; ------------------------- Start of main segment ---------------------------------
 
@@ -62,31 +68,40 @@ drawfield:		cpx		#BORDERHEIGHT-1	; Borderheight-1 will be interpreted by the ass
 				beq    changecolor
 				cpx    #191
 				beq    changetoanothercolor
-				
-				jmp    DrawPlayer
-				
-							
-				jmp 	borderdone
-				
-				
 DrawPlayer:
 			lda #%1111111
 			sta GRP0
 			lda #$0E
 			sta COLUP0
 			ldx #10
+			lda #%1111111
+			ldy player0_x
+			dey
 			sta WSYNC
-looping:	dex
-			Sleep #$4a
+loopmovement:	dex
+			jsr slp
 			sta RESP0
 			cpx #0
-			bne looping
+			bne loopmovement
+
+			sty player0_x
 
 			jmp borderdone
 
+slp:
+	 ldy player0_x
+	 sty WSYNC
+loopslp: 
+	dey
+	cpy #0
+	bne loopslp
+
+	rts ;return to the callee
+
+
 
 borderbottom:  	lda		#%11111111		; Solid row of pixels for all PF# registers
-				 sta     PF0
+				sta     PF0
 				sta		PF1
 				sta		PF2				
 
